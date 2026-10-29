@@ -1,28 +1,31 @@
 ---
 name: procedural-audio
-description: Compose and render original music and sound effects offline in Python with the local Surge XT, sfizz, VSCO 2 CE and VCSL setup (`local_music`, pedalboard, numpy). Use for any request to generate, synthesize or program audio (配乐/转场音乐/片头/音效生成/合成音效), such as transition stingers, jingles, loops, risers, whooshes, impacts, UI blips or ambiences, even if the user doesn't name the tools. Use sfx-sources instead when they want to download existing clips.
-allowed-tools: Bash(python3 .claude/skills/procedural-audio/scripts/*)
+description: Compose and render original music and sound effects offline in Python. Use for audio generation, synthesis, stingers, loops, risers, whooshes, impacts, UI blips and ambiences. Includes a renderer and setup instructions for downloading Surge XT, sfizz and SFZ libraries. Use sfx-sources when the user wants to download existing clips.
+allowed-tools: Bash(python .claude/skills/procedural-audio/scripts/*) Bash(python3 .claude/skills/procedural-audio/scripts/*)
 ---
 # Procedural music & SFX
 
-Everything renders offline with the system `python3` (3.14); there is no audio device, GUI or network. Paths here are relative to the project root (`~/Downloads`).
+Rendering runs offline after the user installs the required tools. Do not assume any plugins, Python packages, presets or sample libraries are already installed.
 
-## What's installed
-- `local_music`: `find_sounds(query, kind)`, `surge(preset)`, `sfizz(sfz)`, `render_notes(plugin, [(midi, start_s, len_s, vel)], out_wav)`.
-- Surge XT: 3,008 presets in `~/Library/Application Support/Surge XT`, grouped by category folders: Basses, Leads, Pads, Keys, Plucks, FX, Drums, Percussion, Synths, Polysynths, Atmospheres, Chords, Bells, Mallets, Strings, Brass, Winds, Sequences, Rhythms and more.
-- SFZ in `~/Music/Sample Libraries`:
-  - VSCO 2 CE: orchestral strings, winds, brass, harp, glockenspiel, timpani, piano, organ.
-  - VCSL: pianos, harpsichords, world plucks, mallets, cymbals, gongs, mark trees, toy and found percussion, drums.
-- Effects and tools: pedalboard (Reverb, Delay, Compressor, Limiter, filters, Chorus, Phaser, Distortion, PitchShift, Convolution), plus numpy, scipy, soundfile, pyloudnorm and matplotlib.
+## Setup before first use
+
+Read [references/setup.md](references/setup.md) when setting up a new machine or resolving missing dependencies. It links to official downloads for Surge XT, sfizz, VSCO 2 CE and VCSL, explains Python installation, and documents the `SOUND_*` path settings. Install only the resources needed for the task.
+
+The renderer is bundled as `scripts/audio_backend.py`; no external `local_music` module is needed. Pure Python synthesis and analysis work without instrument plugins or sample libraries. Surge presets require Surge XT VST3; SFZ instruments require sfizz VST3 and downloaded samples. `requirements.txt` lists the Python dependencies.
+
+Examples assume installation at `.claude/skills/procedural-audio/` relative to the user's project root. Activate the virtual environment from the setup guide, then use its `python` for all commands and render scripts.
+
+Run `doctor` to inspect configured paths, then `find` and `probe` to verify the resources needed for this task. Use actual results from the user's installation; preset names and sample mappings below are examples, not a guaranteed installed inventory.
 
 ## Kit
 `scripts/audio_kit.py` wraps the repetitive parts. Use the CLI to pick sounds:
 ```
 K=.claude/skills/procedural-audio/scripts/audio_kit.py
-python3 $K find "kick" [--kind surge|sfz]   # prints load() specs: "Drums/T8 Kick 1", "VSCO-2-CE-1.1.0/Harp.sfz"
-python3 $K probe "Pads/Film" 57 69          # attack, decay, spectral peaks (MIDI) early vs late
-python3 $K sfzmap "Mark Trees.sfz"          # which key/velocity plays which sample
-python3 $K check out.wav --bpm 140 --png /tmp/x.png   # peak, LUFS, loudness per beat, spectrogram
+python "$K" doctor                            # show configured paths and missing optional resources
+python "$K" find "kick" [--kind surge|sfz]   # prints load() specs: "Drums/T8 Kick 1", "VSCO-2-CE-1.1.0/Harp.sfz"
+python "$K" probe "Pads/Film" 57 69          # attack, decay, spectral peaks (MIDI) early vs late
+python "$K" sfzmap "Mark Trees.sfz"          # which key/velocity plays which sample
+python "$K" check out.wav --bpm 140 --png /tmp/x.png   # peak, LUFS, loudness per beat, spectrogram
 ```
 Then import it in your render script:
 ```python
@@ -46,6 +49,7 @@ ak.write("impact.wav", ak.master(ak.fade(mix, fade_out=0.6)))
 - `master()` drives the limiter by a fixed 2 dB, then peaks at −1 dBFS.
 
 ## Workflow
+0. On a new machine, follow the setup guide and verify the needed engine with `probe` before composing.
 1. Plan on a grid: tempo, key, bar-by-bar roles and the sync point (the hit). Write times as beats (`B = 60 / BPM`), not loose seconds.
 2. Pick sounds with `find`, then `probe` every pitched one you plan to use (see below). Read `sfzmap` for any VCSL percussion.
 3. Render one stem per part and `place` it on a timeline. Send related parts through a shared pedalboard bus: dry-ish drums, reverb/delay on music.
@@ -66,8 +70,8 @@ Healthy pitched sounds show the played note plus its harmonics (+12, +19, +24), 
   Transpose to compensate, and check the SFZ key range (`sfzmap`) before writing notes outside it.
 
 ## Gotchas
-- **Notes at t=0:** Surge renders silence for notes at exactly t=0. `ak.render` adds a 0.5 s lead-in and crops it. If you call `lm.render_notes` directly, offset the notes yourself.
-- **`lm.render_notes` side effects:** it always writes a WAV and quietly attenuates when the peak goes over 0.95. Don't rely on its levels across stems.
+- **Notes at t=0:** Surge renders silence for notes at exactly t=0. `ak.render` adds a 0.5 s lead-in and crops it. If you call `audio_backend.render_notes` directly, offset the notes yourself.
+- **`audio_backend.render_notes` side effects:** it always writes a WAV and quietly attenuates when the peak goes over 0.95. Don't rely on its levels across stems.
 - **Preset names repeat across categories,** and `find_sounds` matches substrings of the full path. Always load by `"Category/Name"`; `find` prints them. For example, Basic DCO Polysynth lives under Synths.
 - **VCSL unpitched instruments map articulations to keys.** For example, Suspended Cymbal 1 has 60–63 bowed, 64–67 crescendo rolls, 68 hits with velocity layers, and 69 bell; Mark Trees has 60 ascending, 61 descending and 62 fast ascending. A "cymbal" note can therefore turn out to be a roll.
 - **Reversing:** reverse one-shots with `ak.reverse` so silence is trimmed on both ends. Otherwise the swell peaks early.

@@ -1,6 +1,7 @@
-"""Helpers for procedural music / SFX with local_music (Surge XT + sfizz).
+"""Helpers for procedural music / SFX with the bundled audio_backend (Surge XT + sfizz).
 
 Import it (sys.path.insert the scripts dir) or use the CLI:
+  python3 audio_kit.py doctor                         show configured download paths
   python3 audio_kit.py find <query> [--kind surge|sfz]   list sounds as load() specs
   python3 audio_kit.py probe <spec> [notes...]           attack, decay, pitch per note
   python3 audio_kit.py sfzmap <spec.sfz>                 key/velocity -> sample map
@@ -18,7 +19,7 @@ import tempfile
 
 import numpy as np
 import soundfile as sf
-import local_music as lm
+import audio_backend as lm
 
 SR = 48000
 LEAD = 0.5   # Surge drops notes at t=0 while the preset state loads
@@ -60,7 +61,10 @@ def load(spec):
 def spec_of(path):
     path = Path(path)
     if path.suffix == ".sfz":
-        return str(path.relative_to(lm.SAMPLE_DIR))
+        try:
+            return str(path.relative_to(lm.SAMPLE_DIR))
+        except ValueError:
+            return str(path.resolve())
     return f"{path.parent.name}/{path.stem.strip()}"
 
 
@@ -291,6 +295,7 @@ def main(argv):
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("doctor")
     f = sub.add_parser("find")
     f.add_argument("query")
     f.add_argument("--kind", default="all", choices=["all", "surge", "sfz"])
@@ -305,7 +310,9 @@ def main(argv):
     c.add_argument("--bpm", type=float)
     c.add_argument("--png")
     args = ap.parse_args(argv)
-    if args.cmd == "find":
+    if args.cmd == "doctor":
+        lm.doctor()
+    elif args.cmd == "find":
         for path in lm.find_sounds(args.query, args.kind):
             print(spec_of(path))
     elif args.cmd == "probe":
