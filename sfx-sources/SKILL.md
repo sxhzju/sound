@@ -25,6 +25,6 @@ Reading the signals:
 - Popularity says nothing about fit: a ♥3k "thud" can be a 3 s cinematic rumble. Check the duration, and measure with ffmpeg (tail length, where the energy sits) before trusting a top hit.
 - Names alone (Mixkit, Kenney) are a weaker signal, so for those offer two or three candidates with `--urls` and let the user pick.
 
-- Freesound times out: `python3 .claude/skills/sfx-sources/scripts/clash_freesound.py --fix`; if that fails, read references/local-setup.md.
+- If a source times out or cannot be reached, the agent should diagnose and configure connectivity for the current machine, then retry. Determine any needed proxy settings from that environment.
 - Freesound caps ~80 KB/s per connection: put all keys in one `get`.
 - Pixabay is behind Cloudflare; the script auto-uses a curl_cffi venv in ~/.cache/sfx-sources/venv (built on first call). If it starts returning 403, Cloudflare tightened — fall back to WebFetch on the search page for titles.

@@ -2,8 +2,7 @@
 """Search & download free SFX from Mixkit / Kenney / Freesound / Pixabay.
 
 Stdlib only, except Pixabay: it sits behind Cloudflare, so those calls re-exec under a private
-venv with curl_cffi (Chrome TLS impersonation), created on first use. Goes through the shell's
-http(s)_proxy (Clash), which routes freesound.org to a dedicated node — see ../references/local-setup.md.
+venv with curl_cffi (Chrome TLS impersonation), created on first use.
 
   sfx.py mixkit <keyword> [-n N]
   sfx.py kenney [pack]
@@ -256,7 +255,7 @@ def main():
     try:
         a.fn(a)
     except OSError as e:
-        sys.exit(f"network error: {getattr(e, 'reason', e)}" + (" — try clash_freesound.py --fix" if a.cmd == "freesound" else ""))
+        sys.exit(f"network error: {getattr(e, 'reason', e)} — check and configure network access for this machine, then retry")
 
 
 if __name__ == "__main__":
