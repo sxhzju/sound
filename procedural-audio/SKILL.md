@@ -1,6 +1,6 @@
 ---
 name: procedural-audio
-description: Compose and render original music and sound effects offline in Python. Use for audio generation, synthesis, stingers, loops, risers, whooshes, impacts, UI blips and ambiences. Includes a renderer and setup instructions for downloading Surge XT, sfizz and SFZ libraries. Use sfx-sources when the user wants to download existing clips.
+description: Compose and render original music and custom tonal sound effects offline in Python. For everyday sound effects, use sfx-sources to find ready-made clips.
 allowed-tools: Bash(python .claude/skills/procedural-audio/scripts/*) Bash(python3 .claude/skills/procedural-audio/scripts/*)
 ---
 # Procedural music & SFX
